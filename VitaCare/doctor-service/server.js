@@ -4,6 +4,7 @@ const cors = require('cors');
 require('dotenv').config({ path: '../.env' });
 
 const doctorRoutes = require('./routes/doctorRoutes');
+const seedDatabase = require('./seed');
 
 const app = express();
 const PORT = process.env.DOCTOR_SERVICE_PORT || 3005;
@@ -13,7 +14,10 @@ app.use(express.json());
 
 const MONGO_URI = process.env.MONGO_URI_DOCTORS || 'mongodb://localhost:27017/vitacare_doctors';
 mongoose.connect(MONGO_URI)
-  .then(() => console.log('Doctor Service: Connected to MongoDB'))
+  .then(async () => {
+    console.log('Doctor Service: Connected to MongoDB');
+    await seedDatabase();
+  })
   .catch(err => console.error('MongoDB connection error:', err));
 
 app.use('/api/doctors', doctorRoutes);
