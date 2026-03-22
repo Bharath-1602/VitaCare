@@ -1,0 +1,255 @@
+version: '3.8'
+
+services:
+  # ==================== API Gateway ====================
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - frontend
+      - user-management-service
+      - doctor-service
+      - registration-service
+      - appointment-service
+      - vital-signs-service
+      - forum-service
+      - complaint-service
+      - admin-service
+    networks:
+      - frontend-network
+      - backend-network
+    restart: unless-stopped
+
+  # ==================== Frontend ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    networks:
+      - frontend-network
+    restart: unless-stopped
+
+  # ==================== User Management Service ====================
+  user-management-service:
+    build:
+      context: .
+      dockerfile: user-management-service/Dockerfile
+    ports:
+      - "3002:3002"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_USERS=mongodb://mongo-users:27017/vitacare_users
+      - USER_SERVICE_PORT=3002
+    depends_on:
+      - mongo-users
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-users:
+    image: mongo:6
+    volumes:
+      - mongo-users-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Doctor Service ====================
+  doctor-service:
+    build:
+      context: .
+      dockerfile: doctor-service/Dockerfile
+    ports:
+      - "3005:3005"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_DOCTORS=mongodb://mongo-doctors:27017/vitacare_doctors
+      - DOCTOR_SERVICE_PORT=3005
+    depends_on:
+      - mongo-doctors
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-doctors:
+    image: mongo:6
+    volumes:
+      - mongo-doctors-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Registration Service ====================
+  registration-service:
+    build:
+      context: .
+      dockerfile: registration-service/Dockerfile
+    ports:
+      - "3004:3004"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_PATIENTS=mongodb://mongo-patients:27017/vitacare_patients
+      - REGISTRATION_SERVICE_PORT=3004
+    depends_on:
+      - mongo-patients
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-patients:
+    image: mongo:6
+    volumes:
+      - mongo-patients-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Appointment Service ====================
+  appointment-service:
+    build:
+      context: .
+      dockerfile: appointment-service/Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_APPOINTMENTS=mongodb://mongo-appointments:27017/vitacare_appointments
+      - APPOINTMENT_SERVICE_PORT=3001
+    depends_on:
+      - mongo-appointments
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-appointments:
+    image: mongo:6
+    volumes:
+      - mongo-appointments-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Vital Signs Service ====================
+  vital-signs-service:
+    build:
+      context: .
+      dockerfile: vital-signs-service/Dockerfile
+    ports:
+      - "3003:3003"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_VITALS=mongodb://mongo-vitals:27017/vitacare_vitals
+      - VITAL_SIGNS_SERVICE_PORT=3003
+    depends_on:
+      - mongo-vitals
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-vitals:
+    image: mongo:6
+    volumes:
+      - mongo-vitals-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Forum Service ====================
+  forum-service:
+    build:
+      context: .
+      dockerfile: forum-service/Dockerfile
+    ports:
+      - "3007:3007"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_FORUM=mongodb://mongo-forum:27017/vitacare_forum
+      - FORUM_SERVICE_PORT=3007
+    depends_on:
+      - mongo-forum
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-forum:
+    image: mongo:6
+    volumes:
+      - mongo-forum-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Complaint Service ====================
+  complaint-service:
+    build:
+      context: .
+      dockerfile: complaint-service/Dockerfile
+    ports:
+      - "3008:3008"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - MONGO_URI_COMPLAINTS=mongodb://mongo-complaints:27017/vitacare_complaints
+      - COMPLAINT_SERVICE_PORT=3008
+    depends_on:
+      - mongo-complaints
+    networks:
+      - backend-network
+      - db-network
+    restart: unless-stopped
+
+  mongo-complaints:
+    image: mongo:6
+    volumes:
+      - mongo-complaints-data:/data/db
+    networks:
+      - db-network
+    restart: unless-stopped
+
+  # ==================== Admin Service ====================
+  admin-service:
+    build:
+      context: .
+      dockerfile: admin-service/Dockerfile
+    ports:
+      - "3009:3009"
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - USER_SERVICE_URL=http://user-management-service:3002
+      - DOCTOR_SERVICE_URL=http://doctor-service:3005
+      - REGISTRATION_SERVICE_URL=http://registration-service:3004
+      - APPOINTMENT_SERVICE_URL=http://appointment-service:3001
+      - VITAL_SIGNS_SERVICE_URL=http://vital-signs-service:3003
+      - FORUM_SERVICE_URL=http://forum-service:3007
+      - COMPLAINT_SERVICE_URL=http://complaint-service:3008
+      - ADMIN_SERVICE_PORT=3009
+    networks:
+      - backend-network
+    restart: unless-stopped
+
+# ==================== Networks ====================
+networks:
+  frontend-network:
+    driver: bridge
+  backend-network:
+    driver: bridge
+  db-network:
+    driver: bridge
+
+# ==================== Volumes ====================
+volumes:
+  mongo-users-data:
+  mongo-doctors-data:
+  mongo-patients-data:
+  mongo-appointments-data:
+  mongo-vitals-data:
+  mongo-forum-data:
+  mongo-complaints-data:
