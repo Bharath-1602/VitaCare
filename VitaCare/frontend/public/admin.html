@@ -38,22 +38,83 @@
             <div class="col-md-2"><div class="stat-card blue text-center"><div class="stat-number" style="color:var(--accent);" id="s-complaints">0</div><div class="stat-label">Complaints</div></div></div>
         </div>
 
-        <div class="row g-4">
-            <!-- Recent Appointments -->
-            <div class="col-md-6">
-                <div class="vc-card p-4">
-                    <h6 class="fw-bold mb-3"><i class="fas fa-calendar-check me-2" style="color:var(--primary);"></i>Recent Appointments</h6>
-                    <div id="admin-appointments">Loading...</div>
+        <!-- Tabs for Management -->
+        <ul class="nav nav-pills mb-4" style="gap:8px;">
+            <li class="nav-item"><button class="nav-link active btn-primary-vc" data-bs-toggle="pill" data-bs-target="#tab-appointments" style="border-radius:50px;"><i class="fas fa-calendar-check me-1"></i> Manage Appointments</button></li>
+            <li class="nav-item"><button class="nav-link btn-outline-vc" data-bs-toggle="pill" data-bs-target="#tab-complaints" style="border-radius:50px;"><i class="fas fa-exclamation-circle me-1"></i> Manage Complaints</button></li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Appointments Management Tab -->
+            <div class="tab-pane fade show active" id="tab-appointments">
+                <div class="vc-card p-4 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="fas fa-calendar-check me-2" style="color:var(--primary);"></i>All Appointments</h5>
+                        <select class="form-select" style="width:180px;border-radius:12px;" id="appt-filter" onchange="loadAppointments()">
+                            <option value="">All Status</option>
+                            <option value="pending">Pending</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="completed">Completed</option>
+                            <option value="cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead style="background:var(--gradient);color:white;">
+                                <tr><th>Patient</th><th>Doctor</th><th>Date</th><th>Time</th><th>Reason</th><th>Status</th><th>Actions</th></tr>
+                            </thead>
+                            <tbody id="admin-appointments"><tr><td colspan="7" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
-            <!-- Open Complaints -->
-            <div class="col-md-6">
+
+            <!-- Complaints Management Tab -->
+            <div class="tab-pane fade" id="tab-complaints">
                 <div class="vc-card p-4">
-                    <h6 class="fw-bold mb-3"><i class="fas fa-exclamation-circle me-2" style="color:var(--accent);"></i>Recent Complaints <span class="badge rounded-pill bg-warning text-dark ms-1" id="open-badge">0 open</span></h6>
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="fw-bold mb-0"><i class="fas fa-exclamation-circle me-2" style="color:var(--accent);"></i>All Complaints</h5>
+                        <select class="form-select" style="width:180px;border-radius:12px;" id="comp-filter" onchange="loadComplaints()">
+                            <option value="">All Status</option>
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                    </div>
                     <div id="admin-complaints">Loading...</div>
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Respond to Complaint Modal -->
+    <div class="modal fade" id="respondModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title fw-bold"><i class="fas fa-reply me-2" style="color:var(--primary)"></i>Respond to Complaint</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3 p-3" style="background:var(--light);border-radius:12px;">
+                    <strong id="resp-subject"></strong>
+                    <p class="text-muted mb-0 mt-1" id="resp-description"></p>
+                    <small class="text-muted">By <span id="resp-user"></span></small>
+                </div>
+                <form id="respond-form">
+                    <input type="hidden" id="resp-id">
+                    <div class="mb-3">
+                        <label class="form-label fw-500">Update Status</label>
+                        <select class="form-select" id="resp-status">
+                            <option value="open">Open</option>
+                            <option value="in-progress">In Progress</option>
+                            <option value="resolved">Resolved</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-500">Response to User</label>
+                        <textarea class="form-control" id="resp-response" rows="3" required placeholder="Type your response to the user..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary-vc w-100"><i class="fas fa-paper-plane me-2"></i>Send Response</button>
+                </form>
+            </div>
+        </div></div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -62,7 +123,8 @@
         if (!requireAuth()) {}
         if (!requireRole('admin')) {}
 
-        async function loadAdmin() {
+        // ==================== Load Dashboard Stats ====================
+        async function loadStats() {
             try {
                 const data = await apiRequest('/api/admin/dashboard');
                 document.getElementById('s-users').textContent = data.totalUsers;
@@ -71,30 +133,116 @@
                 document.getElementById('s-appointments').textContent = data.totalAppointments;
                 document.getElementById('s-posts').textContent = data.totalForumPosts;
                 document.getElementById('s-complaints').textContent = data.totalComplaints;
-                document.getElementById('open-badge').textContent = data.openComplaints + ' open';
-
-                const apptDiv = document.getElementById('admin-appointments');
-                if (data.recentAppointments && data.recentAppointments.length > 0) {
-                    apptDiv.innerHTML = data.recentAppointments.map(a => `
-                        <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background:var(--light);border-radius:10px;">
-                            <div><strong>${a.patientName}</strong> → ${a.doctorName}<br><small class="text-muted">${a.date} ${a.time}</small></div>
-                            <span class="badge badge-${a.status} rounded-pill px-3 py-1">${a.status}</span>
-                        </div>
-                    `).join('');
-                } else { apptDiv.innerHTML = '<p class="text-muted">No appointments</p>'; }
-
-                const compDiv = document.getElementById('admin-complaints');
-                if (data.recentComplaints && data.recentComplaints.length > 0) {
-                    compDiv.innerHTML = data.recentComplaints.map(c => `
-                        <div class="d-flex justify-content-between align-items-center p-2 mb-2" style="background:var(--light);border-radius:10px;">
-                            <div><strong>${c.subject}</strong><br><small class="text-muted">by ${c.userName} • ${formatDate(c.createdAt)}</small></div>
-                            <span class="badge badge-${c.status} rounded-pill px-3 py-1">${c.status}</span>
-                        </div>
-                    `).join('');
-                } else { compDiv.innerHTML = '<p class="text-muted">No complaints</p>'; }
             } catch(e) { console.error(e); }
         }
-        loadAdmin();
+
+        // ==================== Appointments Management ====================
+        async function loadAppointments() {
+            try {
+                const data = await apiRequest('/api/appointments');
+                const filter = document.getElementById('appt-filter').value;
+                let filtered = data;
+                if (filter) filtered = data.filter(a => a.status === filter);
+
+                const tbody = document.getElementById('admin-appointments');
+                if (filtered.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No appointments found</td></tr>'; return; }
+
+                tbody.innerHTML = filtered.map(a => {
+                    let actions = '';
+                    if (a.status === 'pending') {
+                        actions = `
+                            <button class="btn btn-sm btn-success me-1" onclick="updateApptStatus('${a._id}', 'confirmed')" title="Accept"><i class="fas fa-check"></i></button>
+                            <button class="btn btn-sm btn-danger" onclick="updateApptStatus('${a._id}', 'cancelled')" title="Reject"><i class="fas fa-times"></i></button>
+                        `;
+                    } else if (a.status === 'confirmed') {
+                        actions = `<button class="btn btn-sm btn-accent-vc" onclick="updateApptStatus('${a._id}', 'completed')" title="Mark Complete"><i class="fas fa-check-double me-1"></i>Complete</button>`;
+                    } else {
+                        actions = '<span class="text-muted">—</span>';
+                    }
+                    return `<tr>
+                        <td><strong>${a.patientName}</strong></td>
+                        <td><i class="fas fa-user-md me-1" style="color:var(--primary)"></i>${a.doctorName}</td>
+                        <td>${a.date}</td>
+                        <td>${a.time}</td>
+                        <td>${a.reason || '-'}</td>
+                        <td><span class="badge badge-${a.status} rounded-pill px-3 py-1">${a.status}</span></td>
+                        <td>${actions}</td>
+                    </tr>`;
+                }).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function updateApptStatus(id, status) {
+            const labels = { confirmed: 'accept', cancelled: 'reject', completed: 'mark as completed' };
+            if (!confirm(`Are you sure you want to ${labels[status]} this appointment?`)) return;
+            try {
+                await apiRequest(`/api/appointments/${id}/status`, 'PUT', { status });
+                showToast(`Appointment ${status}!`);
+                loadAppointments();
+                loadStats();
+            } catch(err) { showToast(err.message, 'error'); }
+        }
+
+        // ==================== Complaints Management ====================
+        async function loadComplaints() {
+            try {
+                const data = await apiRequest('/api/complaints');
+                const filter = document.getElementById('comp-filter').value;
+                let filtered = data;
+                if (filter) filtered = data.filter(c => c.status === filter);
+
+                const container = document.getElementById('admin-complaints');
+                if (filtered.length === 0) { container.innerHTML = '<p class="text-center text-muted py-4">No complaints found</p>'; return; }
+
+                container.innerHTML = filtered.map(c => `
+                    <div class="p-3 mb-3" style="background:var(--light);border-radius:14px;border-left:4px solid ${c.status === 'open' ? '#ffc107' : c.status === 'in-progress' ? 'var(--accent)' : 'var(--primary)'};">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h6 class="fw-bold mb-1">${c.subject}</h6>
+                                <p class="text-muted mb-1" style="font-size:0.9rem;">${c.description}</p>
+                                <small class="text-muted"><i class="fas fa-user me-1"></i>${c.userName} • <i class="fas fa-clock me-1"></i>${formatDate(c.createdAt)}</small>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge badge-${c.status} rounded-pill px-3 py-1">${c.status}</span>
+                                <button class="btn btn-sm btn-primary-vc" onclick="openRespond('${c._id}', '${c.subject.replace(/'/g, "\\'")}', '${c.description.replace(/'/g, "\\'")}', '${c.userName}', '${c.status}', '${(c.response || '').replace(/'/g, "\\'")}')" title="Respond">
+                                    <i class="fas fa-reply me-1"></i>Respond
+                                </button>
+                            </div>
+                        </div>
+                        ${c.response ? `<div class="mt-2 p-2" style="background:white;border-radius:10px;"><small class="text-muted"><i class="fas fa-comment-dots me-1" style="color:var(--primary);"></i><strong>Admin Response:</strong></small><p class="mb-0 mt-1" style="font-size:0.9rem;">${c.response}</p></div>` : ''}
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function openRespond(id, subject, description, userName, status, response) {
+            document.getElementById('resp-id').value = id;
+            document.getElementById('resp-subject').textContent = subject;
+            document.getElementById('resp-description').textContent = description;
+            document.getElementById('resp-user').textContent = userName;
+            document.getElementById('resp-status').value = status;
+            document.getElementById('resp-response').value = response;
+            new bootstrap.Modal(document.getElementById('respondModal')).show();
+        }
+
+        document.getElementById('respond-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await apiRequest(`/api/complaints/${document.getElementById('resp-id').value}`, 'PUT', {
+                    status: document.getElementById('resp-status').value,
+                    response: document.getElementById('resp-response').value
+                });
+                showToast('Response sent!');
+                bootstrap.Modal.getInstance(document.getElementById('respondModal')).hide();
+                loadComplaints();
+                loadStats();
+            } catch(err) { showToast(err.message, 'error'); }
+        });
+
+        // ==================== Initialize ====================
+        loadStats();
+        loadAppointments();
+        loadComplaints();
     </script>
 </body>
 </html>

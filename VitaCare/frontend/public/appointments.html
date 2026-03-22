@@ -25,7 +25,8 @@
     <div class="vc-main">
         <div class="vc-topbar">
             <div><button class="btn d-lg-none me-2" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button><strong>Appointments</strong></div>
-            <button class="btn btn-primary-vc" data-bs-toggle="modal" data-bs-target="#appointmentModal"><i class="fas fa-plus me-2"></i>Book Appointment</button>
+            <!-- Only users (patients) can book appointments -->
+            <div id="book-btn-container"></div>
         </div>
         <div class="vc-table">
             <table class="table">
@@ -35,14 +36,14 @@
         </div>
     </div>
 
-    <!-- Book Appointment Modal -->
+    <!-- Book Appointment Modal (Users only) -->
     <div class="modal fade" id="appointmentModal" tabindex="-1">
         <div class="modal-dialog"><div class="modal-content">
             <div class="modal-header"><h5 class="modal-title fw-bold"><i class="fas fa-calendar-plus me-2" style="color:var(--primary)"></i>Book Appointment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
             <div class="modal-body">
                 <form id="appointment-form">
                     <div class="mb-3"><label class="form-label fw-500">Select Doctor</label><select class="form-select" id="doctorId" required></select></div>
-                    <div class="mb-3"><label class="form-label fw-500">Patient Name</label><input type="text" class="form-control" id="patientName" required></div>
+                    <div class="mb-3"><label class="form-label fw-500">Your Name</label><input type="text" class="form-control" id="patientName" required></div>
                     <div class="row mb-3">
                         <div class="col-6"><label class="form-label fw-500">Date</label><input type="date" class="form-control" id="date" required></div>
                         <div class="col-6"><label class="form-label fw-500">Time</label><input type="time" class="form-control" id="time" required></div>
@@ -61,11 +62,16 @@
         const user = getUser();
         if (user && user.role === 'admin') document.getElementById('admin-link').style.display = 'flex';
 
+        // Only show "Book Appointment" button for users (patients)
+        if (user && user.role === 'user') {
+            document.getElementById('book-btn-container').innerHTML = '<button class="btn btn-primary-vc" data-bs-toggle="modal" data-bs-target="#appointmentModal"><i class="fas fa-plus me-2"></i>Book Appointment</button>';
+        }
+
         async function loadDoctors() {
             try {
                 const doctors = await apiRequest('/api/doctors');
                 const sel = document.getElementById('doctorId');
-                sel.innerHTML = '<option value="">-- Select --</option>' + doctors.map(d => `<option value="${d._id}" data-name="${d.name}">${d.name} - ${d.specialization}</option>`).join('');
+                sel.innerHTML = '<option value="">-- Select Doctor --</option>' + doctors.map(d => `<option value="${d._id}" data-name="${d.name}">${d.name} - ${d.specialization}</option>`).join('');
             } catch(e) { console.error(e); }
         }
 
@@ -74,17 +80,22 @@
                 const data = await apiRequest('/api/appointments');
                 const tbody = document.getElementById('appointments-list');
                 if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No appointments found</td></tr>'; return; }
-                tbody.innerHTML = data.map(a => `
-                    <tr>
+                tbody.innerHTML = data.map(a => {
+                    let actions = '-';
+                    // User can cancel their own pending appointments
+                    if (user.role === 'user' && a.status === 'pending') {
+                        actions = `<button class="btn btn-sm btn-outline-danger" onclick="cancelAppt('${a._id}')"><i class="fas fa-times me-1"></i>Cancel</button>`;
+                    }
+                    return `<tr>
                         <td><i class="fas fa-user-md me-1" style="color:var(--primary)"></i> ${a.doctorName}</td>
                         <td>${a.patientName}</td>
                         <td>${a.date}</td>
                         <td>${a.time}</td>
                         <td>${a.reason || '-'}</td>
                         <td><span class="badge badge-${a.status} rounded-pill px-3 py-1">${a.status}</span></td>
-                        <td>${a.status === 'pending' ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelAppt('${a._id}')"><i class="fas fa-times"></i></button>` : '-'}</td>
-                    </tr>
-                `).join('');
+                        <td>${actions}</td>
+                    </tr>`;
+                }).join('');
             } catch(e) { console.error(e); }
         }
 
@@ -100,7 +111,7 @@
                     time: document.getElementById('time').value,
                     reason: document.getElementById('reason').value
                 });
-                showToast('Appointment booked!');
+                showToast('Appointment booked! Admin will review it.');
                 bootstrap.Modal.getInstance(document.getElementById('appointmentModal')).hide();
                 e.target.reset();
                 loadAppointments();
