@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forum - VitaCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="vc-sidebar" id="sidebar">
+        <div class="sidebar-brand"><i class="fas fa-heartbeat"></i> VitaCare</div>
+        <a href="dashboard.html" class="sidebar-link"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="appointments.html" class="sidebar-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+        <a href="doctors.html" class="sidebar-link"><i class="fas fa-user-md"></i> Doctors</a>
+        <a href="vitals.html" class="sidebar-link"><i class="fas fa-heartbeat"></i> Vital Signs</a>
+        <a href="patient-register.html" class="sidebar-link"><i class="fas fa-clipboard-list"></i> Patient Registration</a>
+        <a href="forum.html" class="sidebar-link active"><i class="fas fa-comments"></i> Forum</a>
+        <a href="complaints.html" class="sidebar-link"><i class="fas fa-exclamation-circle"></i> Complaints</a>
+        <a href="admin.html" class="sidebar-link" id="admin-link" style="display:none;"><i class="fas fa-tachometer-alt"></i> Admin Panel</a>
+        <hr style="margin:15px 25px;">
+        <a href="#" class="sidebar-link" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+    <div class="vc-main">
+        <div class="vc-topbar">
+            <div><button class="btn d-lg-none me-2" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button><strong>Community Forum</strong></div>
+            <button class="btn btn-primary-vc" data-bs-toggle="modal" data-bs-target="#postModal"><i class="fas fa-plus me-2"></i>New Post</button>
+        </div>
+
+        <div class="mb-3">
+            <select class="form-select" style="width:200px;border-radius:12px;" id="category-filter" onchange="loadPosts()">
+                <option value="">All Categories</option>
+                <option value="General">General</option>
+                <option value="Health Tips">Health Tips</option>
+                <option value="Questions">Questions</option>
+                <option value="Experience">Experience</option>
+                <option value="Announcements">Announcements</option>
+            </select>
+        </div>
+
+        <div id="posts-container"><div class="text-center text-muted py-5">Loading...</div></div>
+    </div>
+
+    <!-- New Post Modal -->
+    <div class="modal fade" id="postModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title fw-bold"><i class="fas fa-pen me-2" style="color:var(--primary)"></i>Create Post</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="post-form">
+                    <div class="mb-3"><label class="form-label fw-500">Title</label><input type="text" class="form-control" id="post-title" required></div>
+                    <div class="mb-3"><label class="form-label fw-500">Category</label>
+                        <select class="form-select" id="post-category"><option>General</option><option>Health Tips</option><option>Questions</option><option>Experience</option><option>Announcements</option></select>
+                    </div>
+                    <div class="mb-3"><label class="form-label fw-500">Content</label><textarea class="form-control" id="post-content" rows="4" required></textarea></div>
+                    <button type="submit" class="btn btn-primary-vc w-100"><i class="fas fa-paper-plane me-2"></i>Publish</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+    <!-- Comment Modal -->
+    <div class="modal fade" id="commentModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title fw-bold"><i class="fas fa-reply me-2" style="color:var(--accent)"></i>Add Comment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="comment-form">
+                    <input type="hidden" id="comment-post-id">
+                    <div class="mb-3"><label class="form-label fw-500">Your Comment</label><textarea class="form-control" id="comment-text" rows="3" required></textarea></div>
+                    <button type="submit" class="btn btn-accent-vc w-100"><i class="fas fa-reply me-2"></i>Post Comment</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!requireAuth()) {}
+        const user = getUser();
+        if (user && user.role === 'admin') document.getElementById('admin-link').style.display = 'flex';
+
+        async function loadPosts() {
+            try {
+                const cat = document.getElementById('category-filter').value;
+                const url = cat ? `/api/forum/posts?category=${cat}` : '/api/forum/posts';
+                const data = await apiRequest(url);
+                const container = document.getElementById('posts-container');
+                if (data.length === 0) { container.innerHTML = '<div class="text-center text-muted py-5">No posts yet. Be the first!</div>'; return; }
+                container.innerHTML = data.map(p => `
+                    <div class="forum-post">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h5 class="fw-bold mb-1">${p.title}</h5>
+                                <small class="text-muted"><i class="fas fa-user me-1"></i>${p.userName} • <i class="fas fa-clock me-1"></i>${formatDate(p.createdAt)} • <span class="badge rounded-pill" style="background:var(--light);color:var(--primary);">${p.category}</span></small>
+                            </div>
+                            ${p.userId === user.id || user.role === 'admin' ? `<button class="btn btn-sm text-danger" onclick="deletePost('${p._id}')"><i class="fas fa-trash"></i></button>` : ''}
+                        </div>
+                        <p class="mb-3">${p.content}</p>
+                        <div class="d-flex align-items-center gap-3">
+                            <button class="btn btn-sm btn-outline-vc" onclick="openComment('${p._id}')"><i class="fas fa-reply me-1"></i>Reply (${p.comments ? p.comments.length : 0})</button>
+                        </div>
+                        ${p.comments && p.comments.length > 0 ? `
+                            <div class="mt-3">${p.comments.map(c => `
+                                <div class="forum-comment"><strong>${c.userName}</strong> <small class="text-muted">• ${formatDate(c.createdAt)}</small><p class="mb-0 mt-1">${c.text}</p></div>
+                            `).join('')}</div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        function openComment(postId) {
+            document.getElementById('comment-post-id').value = postId;
+            new bootstrap.Modal(document.getElementById('commentModal')).show();
+        }
+
+        document.getElementById('post-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                await apiRequest('/api/forum/posts', 'POST', {
+                    title: document.getElementById('post-title').value,
+                    category: document.getElementById('post-category').value,
+                    content: document.getElementById('post-content').value
+                });
+                showToast('Post published!');
+                bootstrap.Modal.getInstance(document.getElementById('postModal')).hide();
+                e.target.reset();
+                loadPosts();
+            } catch(err) { showToast(err.message, 'error'); }
+        });
+
+        document.getElementById('comment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const postId = document.getElementById('comment-post-id').value;
+            try {
+                await apiRequest(`/api/forum/posts/${postId}/comments`, 'POST', {
+                    text: document.getElementById('comment-text').value
+                });
+                showToast('Comment added!');
+                bootstrap.Modal.getInstance(document.getElementById('commentModal')).hide();
+                e.target.reset();
+                loadPosts();
+            } catch(err) { showToast(err.message, 'error'); }
+        });
+
+        async function deletePost(id) {
+            if (!confirm('Delete this post?')) return;
+            try { await apiRequest(`/api/forum/posts/${id}`, 'DELETE'); showToast('Post deleted.'); loadPosts(); }
+            catch(err) { showToast(err.message, 'error'); }
+        }
+
+        loadPosts();
+    </script>
+</body>
+</html>

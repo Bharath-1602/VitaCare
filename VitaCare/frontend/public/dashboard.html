@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - VitaCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="vc-sidebar" id="sidebar">
+        <div class="sidebar-brand"><i class="fas fa-heartbeat"></i> VitaCare</div>
+        <a href="dashboard.html" class="sidebar-link active"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="appointments.html" class="sidebar-link"><i class="fas fa-calendar-check"></i> Appointments</a>
+        <a href="doctors.html" class="sidebar-link"><i class="fas fa-user-md"></i> Doctors</a>
+        <a href="vitals.html" class="sidebar-link"><i class="fas fa-heartbeat"></i> Vital Signs</a>
+        <a href="patient-register.html" class="sidebar-link"><i class="fas fa-clipboard-list"></i> Patient Registration</a>
+        <a href="forum.html" class="sidebar-link"><i class="fas fa-comments"></i> Forum</a>
+        <a href="complaints.html" class="sidebar-link"><i class="fas fa-exclamation-circle"></i> Complaints</a>
+        <a href="admin.html" class="sidebar-link" id="admin-link" style="display:none;"><i class="fas fa-tachometer-alt"></i> Admin Panel</a>
+        <hr style="margin:15px 25px;">
+        <a href="#" class="sidebar-link" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+
+    <!-- Main -->
+    <div class="vc-main">
+        <div class="vc-topbar">
+            <div>
+                <button class="btn d-lg-none me-2" onclick="document.getElementById('sidebar').classList.toggle('open')">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <strong>Dashboard</strong>
+            </div>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge rounded-pill" style="background:var(--light);color:var(--primary);padding:8px 16px;" id="user-role-badge"></span>
+                <span class="fw-500" id="user-name"></span>
+            </div>
+        </div>
+
+        <!-- Welcome Card -->
+        <div class="vc-card p-4 mb-4" style="background:var(--gradient);color:white;">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h3 class="fw-bold mb-2">Welcome back, <span id="welcome-name"></span>! 👋</h3>
+                    <p class="mb-0" style="opacity:0.9;">Your health journey continues here. Stay up-to-date with your appointments and records.</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <i class="fas fa-stethoscope" style="font-size:4rem;opacity:0.2;"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row g-4 mb-4" id="stats-row">
+            <div class="col-md-3">
+                <div class="stat-card green">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-calendar-check me-2" style="color:var(--primary);font-size:1.3rem;"></i>
+                        <span class="stat-label">Appointments</span>
+                    </div>
+                    <div class="stat-number" style="color:var(--primary);" id="stat-appointments">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card blue">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-user-md me-2" style="color:var(--accent);font-size:1.3rem;"></i>
+                        <span class="stat-label">Doctors</span>
+                    </div>
+                    <div class="stat-number" style="color:var(--accent);" id="stat-doctors">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card green">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-comments me-2" style="color:var(--primary);font-size:1.3rem;"></i>
+                        <span class="stat-label">Forum Posts</span>
+                    </div>
+                    <div class="stat-number" style="color:var(--primary);" id="stat-posts">0</div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card blue">
+                    <div class="d-flex align-items-center mb-2">
+                        <i class="fas fa-exclamation-circle me-2" style="color:var(--accent);font-size:1.3rem;"></i>
+                        <span class="stat-label">Complaints</span>
+                    </div>
+                    <div class="stat-number" style="color:var(--accent);" id="stat-complaints">0</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <h5 class="fw-bold mb-3"><i class="fas fa-bolt me-2" style="color:var(--primary);"></i>Quick Actions</h5>
+        <div class="row g-3 mb-4">
+            <div class="col-md-3"><a href="appointments.html" class="vc-card d-block p-3 text-center text-decoration-none" style="color:var(--dark);"><i class="fas fa-plus-circle fa-2x mb-2" style="color:var(--primary);"></i><br><small class="fw-500">New Appointment</small></a></div>
+            <div class="col-md-3"><a href="doctors.html" class="vc-card d-block p-3 text-center text-decoration-none" style="color:var(--dark);"><i class="fas fa-search fa-2x mb-2" style="color:var(--accent);"></i><br><small class="fw-500">Find Doctors</small></a></div>
+            <div class="col-md-3"><a href="forum.html" class="vc-card d-block p-3 text-center text-decoration-none" style="color:var(--dark);"><i class="fas fa-pen fa-2x mb-2" style="color:var(--primary);"></i><br><small class="fw-500">Forum Post</small></a></div>
+            <div class="col-md-3"><a href="complaints.html" class="vc-card d-block p-3 text-center text-decoration-none" style="color:var(--dark);"><i class="fas fa-flag fa-2x mb-2" style="color:var(--accent);"></i><br><small class="fw-500">File Complaint</small></a></div>
+        </div>
+
+        <!-- Recent Appointments -->
+        <h5 class="fw-bold mb-3"><i class="fas fa-clock me-2" style="color:var(--accent);"></i>Recent Appointments</h5>
+        <div class="vc-table mb-4">
+            <table class="table">
+                <thead><tr><th>Doctor</th><th>Date</th><th>Time</th><th>Status</th></tr></thead>
+                <tbody id="recent-appointments"><tr><td colspan="4" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!requireAuth()) { /* redirected */ }
+        const user = getUser();
+        document.getElementById('welcome-name').textContent = user ? user.name : 'User';
+        document.getElementById('user-name').textContent = user ? user.name : '';
+        document.getElementById('user-role-badge').textContent = user ? user.role.toUpperCase() : '';
+        if (user && user.role === 'admin') document.getElementById('admin-link').style.display = 'flex';
+
+        async function loadDashboard() {
+            try {
+                const [doctors, appointments, posts, complaints] = await Promise.allSettled([
+                    apiRequest('/api/doctors'),
+                    apiRequest('/api/appointments'),
+                    apiRequest('/api/forum/posts'),
+                    apiRequest('/api/complaints')
+                ]);
+                if (doctors.status === 'fulfilled') document.getElementById('stat-doctors').textContent = doctors.value.length;
+                if (appointments.status === 'fulfilled') {
+                    document.getElementById('stat-appointments').textContent = appointments.value.length;
+                    const tbody = document.getElementById('recent-appointments');
+                    if (appointments.value.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">No appointments yet</td></tr>';
+                    } else {
+                        tbody.innerHTML = appointments.value.slice(0, 5).map(a => `
+                            <tr>
+                                <td><i class="fas fa-user-md me-2" style="color:var(--primary)"></i>${a.doctorName}</td>
+                                <td>${a.date}</td>
+                                <td>${a.time}</td>
+                                <td><span class="badge badge-${a.status} rounded-pill px-3 py-1">${a.status}</span></td>
+                            </tr>
+                        `).join('');
+                    }
+                }
+                if (posts.status === 'fulfilled') document.getElementById('stat-posts').textContent = posts.value.length;
+                if (complaints.status === 'fulfilled') document.getElementById('stat-complaints').textContent = complaints.value.length;
+            } catch(e) { console.error(e); }
+        }
+        loadDashboard();
+    </script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Appointments - VitaCare</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="vc-sidebar" id="sidebar">
+        <div class="sidebar-brand"><i class="fas fa-heartbeat"></i> VitaCare</div>
+        <a href="dashboard.html" class="sidebar-link"><i class="fas fa-th-large"></i> Dashboard</a>
+        <a href="appointments.html" class="sidebar-link active"><i class="fas fa-calendar-check"></i> Appointments</a>
+        <a href="doctors.html" class="sidebar-link"><i class="fas fa-user-md"></i> Doctors</a>
+        <a href="vitals.html" class="sidebar-link"><i class="fas fa-heartbeat"></i> Vital Signs</a>
+        <a href="patient-register.html" class="sidebar-link"><i class="fas fa-clipboard-list"></i> Patient Registration</a>
+        <a href="forum.html" class="sidebar-link"><i class="fas fa-comments"></i> Forum</a>
+        <a href="complaints.html" class="sidebar-link"><i class="fas fa-exclamation-circle"></i> Complaints</a>
+        <a href="admin.html" class="sidebar-link" id="admin-link" style="display:none;"><i class="fas fa-tachometer-alt"></i> Admin Panel</a>
+        <hr style="margin:15px 25px;">
+        <a href="#" class="sidebar-link" onclick="logout(); return false;"><i class="fas fa-sign-out-alt"></i> Logout</a>
+    </div>
+    <div class="vc-main">
+        <div class="vc-topbar">
+            <div><button class="btn d-lg-none me-2" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="fas fa-bars"></i></button><strong>Appointments</strong></div>
+            <button class="btn btn-primary-vc" data-bs-toggle="modal" data-bs-target="#appointmentModal"><i class="fas fa-plus me-2"></i>Book Appointment</button>
+        </div>
+        <div class="vc-table">
+            <table class="table">
+                <thead><tr><th>Doctor</th><th>Patient</th><th>Date</th><th>Time</th><th>Reason</th><th>Status</th><th>Actions</th></tr></thead>
+                <tbody id="appointments-list"><tr><td colspan="7" class="text-center text-muted py-4">Loading...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Book Appointment Modal -->
+    <div class="modal fade" id="appointmentModal" tabindex="-1">
+        <div class="modal-dialog"><div class="modal-content">
+            <div class="modal-header"><h5 class="modal-title fw-bold"><i class="fas fa-calendar-plus me-2" style="color:var(--primary)"></i>Book Appointment</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <form id="appointment-form">
+                    <div class="mb-3"><label class="form-label fw-500">Select Doctor</label><select class="form-select" id="doctorId" required></select></div>
+                    <div class="mb-3"><label class="form-label fw-500">Patient Name</label><input type="text" class="form-control" id="patientName" required></div>
+                    <div class="row mb-3">
+                        <div class="col-6"><label class="form-label fw-500">Date</label><input type="date" class="form-control" id="date" required></div>
+                        <div class="col-6"><label class="form-label fw-500">Time</label><input type="time" class="form-control" id="time" required></div>
+                    </div>
+                    <div class="mb-3"><label class="form-label fw-500">Reason</label><textarea class="form-control" id="reason" rows="2" placeholder="Brief reason for visit"></textarea></div>
+                    <button type="submit" class="btn btn-primary-vc w-100"><i class="fas fa-check me-2"></i>Confirm Booking</button>
+                </form>
+            </div>
+        </div></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        if (!requireAuth()) {}
+        const user = getUser();
+        if (user && user.role === 'admin') document.getElementById('admin-link').style.display = 'flex';
+
+        async function loadDoctors() {
+            try {
+                const doctors = await apiRequest('/api/doctors');
+                const sel = document.getElementById('doctorId');
+                sel.innerHTML = '<option value="">-- Select --</option>' + doctors.map(d => `<option value="${d._id}" data-name="${d.name}">${d.name} - ${d.specialization}</option>`).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        async function loadAppointments() {
+            try {
+                const data = await apiRequest('/api/appointments');
+                const tbody = document.getElementById('appointments-list');
+                if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-4">No appointments found</td></tr>'; return; }
+                tbody.innerHTML = data.map(a => `
+                    <tr>
+                        <td><i class="fas fa-user-md me-1" style="color:var(--primary)"></i> ${a.doctorName}</td>
+                        <td>${a.patientName}</td>
+                        <td>${a.date}</td>
+                        <td>${a.time}</td>
+                        <td>${a.reason || '-'}</td>
+                        <td><span class="badge badge-${a.status} rounded-pill px-3 py-1">${a.status}</span></td>
+                        <td>${a.status === 'pending' ? `<button class="btn btn-sm btn-outline-danger" onclick="cancelAppt('${a._id}')"><i class="fas fa-times"></i></button>` : '-'}</td>
+                    </tr>
+                `).join('');
+            } catch(e) { console.error(e); }
+        }
+
+        document.getElementById('appointment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try {
+                const sel = document.getElementById('doctorId');
+                const doctorName = sel.options[sel.selectedIndex].dataset.name;
+                await apiRequest('/api/appointments', 'POST', {
+                    doctorId: sel.value, doctorName,
+                    patientId: user.id, patientName: document.getElementById('patientName').value,
+                    date: document.getElementById('date').value,
+                    time: document.getElementById('time').value,
+                    reason: document.getElementById('reason').value
+                });
+                showToast('Appointment booked!');
+                bootstrap.Modal.getInstance(document.getElementById('appointmentModal')).hide();
+                e.target.reset();
+                loadAppointments();
+            } catch(err) { showToast(err.message, 'error'); }
+        });
+
+        async function cancelAppt(id) {
+            if (!confirm('Cancel this appointment?')) return;
+            try {
+                await apiRequest(`/api/appointments/${id}`, 'DELETE');
+                showToast('Appointment cancelled.');
+                loadAppointments();
+            } catch(err) { showToast(err.message, 'error'); }
+        }
+
+        loadDoctors();
+        loadAppointments();
+    </script>
+</body>
+</html>
